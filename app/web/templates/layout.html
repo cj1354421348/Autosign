@@ -1,26 +1,66 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh" data-bs-theme="auto">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AutoSigner</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom Styles -->
     <link rel="stylesheet" href="/static/style.css">
+
+    <!-- Theme Toggler Script (Inline to prevent flash) -->
+    <script>
+        (() => {
+            'use strict'
+            const getStoredTheme = () => localStorage.getItem('theme')
+            const setStoredTheme = theme => localStorage.setItem('theme', theme)
+            const getPreferredTheme = () => {
+                const storedTheme = getStoredTheme()
+                if (storedTheme) {
+                    return storedTheme
+                }
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+            }
+            const setTheme = theme => {
+                if (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.setAttribute('data-bs-theme', 'dark')
+                } else {
+                    document.documentElement.setAttribute('data-bs-theme', theme)
+                }
+            }
+            setTheme(getPreferredTheme())
+        })()
+    </script>
 </head>
 
 <body>
-    <div class="container">
-        <header class="header">
-            <h1>AutoSigner</h1>
-            <nav>
-                <a href="/" class="btn">仪表盘</a>
-            </nav>
-        </header>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary mb-4 shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-primary" href="/">
+                <i class="bi bi-robot"></i> AutoSigner
+            </a>
+            <div class="d-flex align-items-center">
+                <a href="/" class="btn btn-outline-secondary btn-sm me-2">
+                    <i class="bi bi-speedometer2"></i> 仪表盘
+                </a>
+                <!-- Theme Toggle could go here -->
+            </div>
+        </div>
+    </nav>
 
-        <main>
-            {% block content %}{% endblock %}
-        </main>
+    <div class="container main-content">
+        {% block content %}{% endblock %}
     </div>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
     <script src="/static/script.js"></script>
 </body>
 

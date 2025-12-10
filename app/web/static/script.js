@@ -27,7 +27,6 @@ async function apiCall(method, url, body = null) {
 
     const resp = await fetch(url, options);
     if (resp.status === 401) {
-        // Unauthorized
         removeToken();
         if (!window.location.pathname.includes("/login")) {
             window.location.href = "/login";
@@ -37,7 +36,6 @@ async function apiCall(method, url, body = null) {
     if (!resp.ok) {
         throw new Error(await resp.text());
     }
-    // Handle empty response (e.g. 204)
     const text = await resp.text();
     return text ? JSON.parse(text) : {};
 }
@@ -68,7 +66,6 @@ function logout() {
     window.location.href = "/login";
 }
 
-// Check Auth on load
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
     if (path !== "/login" && !getToken()) {
@@ -80,64 +77,93 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadDashboard() {
     const container = document.getElementById('task-list');
-    container.innerHTML = '正在加载任务...';
     try {
         const tasks = await apiCall('GET', '/api/tasks');
         if (tasks.length === 0) {
-            container.innerHTML = '<p>暂无任务，请创建。</p>';
+            container.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <div class="alert alert-info d-inline-block">暂无任务，请点击右上角新建。</div>
+                </div>`;
             return;
         }
 
         let html = '';
         tasks.forEach(task => {
-            const statusClass = task.last_result === 'SUCCESS' ? 'status-success' : (task.last_result === 'FAILURE' ? 'status-failure' : '');
-            const badge = `<span class="status-badge ${statusClass}">${task.last_result || '等待中'}</span>`;
+            let badgeClass = 'bg-secondary';
+            if (task.last_result === 'SUCCESS') badgeClass = 'bg-success';
+            if (task.last_result === 'FAILURE') badgeClass = 'bg-danger';
+
+            const badge = `<span class="badge ${badgeClass}">${task.last_result || '等待中'}</span>`;
+            const modeLabel = task.mode == 'COOKIE' ? '<span class="badge text-bg-light border">Cookie</span>' : '<span class="badge text-bg-dark border">密码</span>';
+            const lastRun = task.last_run ? new Date(task.last_run).toLocaleString() : '从未运行';
 
             html += `
-            <div class="card">
-                <div style="display:flex; justify-content:space-between;">
-                    <h3>${task.name}</h3>
-                    ${badge}
-                </div>
-                <p class="text-muted">${task.mode == 'COOKIE' ? 'Cookie模式' : '密码模式'} | Cron: ${task.schedule}</p>
-                <p class="text-muted">上次运行: ${task.last_run ? new Date(task.last_run).toLocaleString() : '从未'}</p>
-
-                <div style="margin-top: 1rem; display:flex; gap:0.5rem;">
-                    <button id="run-btn-${task.id}" onclick="runTask('${task.id}')" class="btn btn-sm btn-success">立即运行</button>
-                    <a href="/task/${task.id}" class="btn btn-sm btn-primary">编辑</a>
-                    <button onclick="deleteTask('${task.id}')" class="btn btn-sm btn-danger">删除</button>
-                </div>
-
-                <div style="margin-top:0.5rem;">
-                    <details ontoggle="if(this.open) loadLogs('${task.id}', 'logs-${task.id}')">
-                        <summary style="cursor:pointer; font-size:0.9em;">查看日志</summary>
-                        <div id="logs-${task.id}" style="background:rgba(0,0,0,0.05); padding:0.5rem; border-radius:4px; max-height:200px; overflow:auto;">
-                            加载日志...
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-transparent">
+                        <h5 class="card-title mb-0 text-truncate" title="${task.name}">${task.name}</h5>
+                        ${badge}
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                             ${modeLabel} <small class="text-muted ms-2"><i class="bi bi-clock"></i> ${task.schedule}</small>
                         </div>
-                    </details>
+                        <p class="card-text small text-muted">
+                            上次运行: ${lastRun}
+                        </p>
+                    </div>
+                    <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between">
+                         <button id="run-btn-${task.id}" onclick="runTask('${task.id}')" class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-play-fill"></i> 运行
+                         </button>
+                         <div class="btn-group">
+                            <button onclick="showLogs('${task.id}', '${task.name}')" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-journal-text"></i> 日志
+                            </button>
+                            <a href="/task/${task.id}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> 编辑
+                            </a>
+                            <button onclick="deleteTask('${task.id}')" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                         </div>
+                    </div>
                 </div>
             </div>`;
         });
         container.innerHTML = html;
     } catch (e) {
-        container.innerHTML = `加载任务失败: ${e.message}`;
+        container.innerHTML = `<div class="col-12"><div class="alert alert-danger">加载任务失败: ${e.message}</div></div>`;
     }
 }
 
 async function runTask(taskId) {
     try {
         const btn = document.getElementById(`run-btn-${taskId}`);
-        if (btn) { btn.innerText = "运行中..."; btn.disabled = true; }
-        await apiCall('POST', `/api/tasks/${taskId}/run`);
-        alert("任务已启动!");
-        loadDashboard(); // Reload list to update status if needed, though log update is async
+        if (btn) {
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
+            btn.disabled = true;
+
+            await apiCall('POST', `/api/tasks/${taskId}/run`);
+            // Wait a bit then refresh
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                loadDashboard();
+            }, 1000);
+        } else {
+            await apiCall('POST', `/api/tasks/${taskId}/run`);
+            loadDashboard();
+        }
     } catch (e) {
         alert("错误: " + e.message);
+        loadDashboard();
     }
 }
 
 async function deleteTask(taskId) {
-    if (!confirm("确定要删除吗?")) return;
+    if (!confirm("确定要删除此任务吗?")) return;
     try {
         await apiCall('DELETE', `/api/tasks/${taskId}`);
         loadDashboard();
@@ -146,52 +172,77 @@ async function deleteTask(taskId) {
     }
 }
 
-async function loadLogs(taskId, elementId) {
-    const container = document.getElementById(elementId);
-    container.innerHTML = '加载中...';
+// Global Modal instance
+let logModal;
+
+async function showLogs(taskId, taskName) {
+    // Initializes modal if not already
+    if (!logModal) {
+        const el = document.getElementById('logModal');
+        logModal = new bootstrap.Modal(el);
+    }
+
+    // Update Title
+    document.getElementById('logModalLabel').innerText = `日志: ${taskName}`;
+    const body = document.getElementById('logModalBody');
+    body.innerHTML = '<div class="text-center p-3"><div class="spinner-border text-secondary" role="status"></div></div>';
+
+    logModal.show();
+
     try {
         const logs = await apiCall('GET', `/api/logs/${taskId}`);
         if (logs.length === 0) {
-            container.innerHTML = '暂无日志。';
+            body.innerHTML = '<div class="alert alert-light text-center">暂无日志记录。</div>';
         } else {
-            let html = '<table style="width:100%; font-size:0.8rem; border-collapse: collapse;">';
+            let html = '<div class="list-group list-group-flush">';
             logs.forEach(log => {
-                const color = log.status ? 'var(--success-color)' : 'var(--danger-color)';
-                const status = log.status ? '成功' : '失败';
-                const safeOutput = log.output.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                html += `<tr style="border-bottom: 1px solid rgba(0,0,0,0.05);">
-                    <td style="padding:4px;">${new Date(log.timestamp).toLocaleString()}</td>
-                    <td style="padding:4px; color:${color}; font-weight:bold;">${status}</td>
-                    <td style="padding:4px;"><div style="max-height:60px; overflow:auto; white-space:pre-wrap;">${safeOutput}</div></td>
-                </tr>`;
+                const colorClass = log.status ? 'text-success' : 'text-danger';
+                const icon = log.status ? '<i class="bi bi-check-circle-fill"></i>' : '<i class="bi bi-x-circle-fill"></i>';
+                // HTML Escape output
+                const safeOutput = log.output.replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+
+                html += `
+                <div class="list-group-item bg-transparent">
+                    <div class="d-flex w-100 justify-content-between mb-1">
+                        <small class="${colorClass} fw-bold">${icon} ${log.status ? '成功' : '失败'}</small>
+                        <small class="text-muted">${new Date(log.timestamp).toLocaleString()}</small>
+                    </div>
+                    <pre class="mb-0 p-2 bg-body-tertiary border rounded" style="font-size: 0.85em;">${safeOutput}</pre>
+                </div>`;
             });
-            html += '</table>';
-            container.innerHTML = html;
+            html += '</div>';
+            body.innerHTML = html;
         }
     } catch (e) {
-        container.innerHTML = '加载日志出错: ' + e.message;
+        body.innerHTML = `<div class="alert alert-danger">加载日志失败: ${e.message}</div>`;
     }
 }
 
 // --- Edit Task Page Functions ---
 
 async function loadTaskEditor(taskId) {
+    const titleEl = document.getElementById('page-title');
+    if (!titleEl) return; // Not on edit page
+
     if (!taskId || taskId === 'None') {
-        document.getElementById('page-title').innerText = "新建任务";
-        return; // New task, empty form
+        titleEl.innerText = "新建任务";
+        toggleMode(); // Ensure correct section is shown for default selection
+        return;
     }
 
-    document.getElementById('page-title').innerText = "编辑任务";
+    titleEl.innerText = "编辑任务";
     try {
         const task = await apiCall('GET', `/api/tasks/${taskId}`);
-
-        // Populate Form
         const form = document.getElementById('taskForm');
         form.querySelector('[name=name]').value = task.name;
         form.querySelector('[name=schedule]').value = task.schedule;
         form.querySelector('[name=mode]').value = task.mode;
 
-        toggleMode(); // Update sections
+        toggleMode();
 
         if (task.mode === 'COOKIE') {
             form.querySelector('[name=cookie_signin_url]').value = task.config.signin_url || '';
@@ -213,15 +264,17 @@ async function loadTaskEditor(taskId) {
 }
 
 function toggleMode() {
-    const mode = document.getElementById('mode').value;
+    const modeEl = document.getElementById('mode');
+    if (!modeEl) return;
+    const mode = modeEl.value;
     const cookieSection = document.getElementById('section-cookie');
     const passwordSection = document.getElementById('section-password');
 
     if (mode === 'COOKIE') {
-        cookieSection.style.display = 'block';
-        passwordSection.style.display = 'none';
+        cookieSection.classList.remove('d-none');
+        passwordSection.classList.add('d-none');
     } else {
-        cookieSection.style.display = 'none';
-        passwordSection.style.display = 'block';
+        cookieSection.classList.add('d-none');
+        passwordSection.classList.remove('d-none');
     }
 }

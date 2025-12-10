@@ -1,17 +1,49 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="header">
-    <h2>任务列表</h2>
-    <div>
-        <a href="/task/new" class="btn btn-primary">+ 新建任务</a>
-        <button onclick="logout()" class="btn btn-danger" style="margin-left: 10px;">退出登录</button>
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h2 class="h3 mb-0">任务列表</h2>
+    </div>
+    <div class="col-auto">
+        <div class="btn-group">
+            <a href="/task/new" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> 新建任务
+            </a>
+            <button onclick="logout()" class="btn btn-outline-danger">
+                <i class="bi bi-box-arrow-right"></i> 退出
+            </button>
+        </div>
     </div>
 </div>
 
-<div class="grid" id="task-list">
+<div class="row g-4" id="task-list">
     <!-- Tasks loaded by JS -->
-    正在加载任务...
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted mt-2">正在获取任务...</p>
+    </div>
+</div>
+
+<!-- Log Modal -->
+<div class="modal fade" id="logModal" tabindex="-1" aria-labelledby="logModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logModalLabel">任务日志</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light font-monospace small" id="logModalBody">
+                <!-- Logs injected here -->
+                加载中...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>

@@ -1,41 +1,66 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="card" style="max-width: 400px; margin: 4rem auto;">
-    <div class="header" style="justify-content: center;">
-        <h2>系统登录</h2>
+<div class="row justify-content-center align-items-center" style="min-height: 60vh;">
+    <div class="col-md-5 col-lg-4">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <h1 class="h3 fw-bold mb-1">欢迎回来</h1>
+                    <p class="text-muted small">AutoSigner 管理系统</p>
+                </div>
+
+                <form id="loginForm">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="username" name="username" placeholder="用户名"
+                            required>
+                        <label for="username">用户名</label>
+                    </div>
+                    <div class="form-floating mb-4">
+                        <input type="password" class="form-control" id="password" name="password" placeholder="密码"
+                            required>
+                        <label for="password">密码</label>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right"></i> 登录
+                        </button>
+                    </div>
+
+                    <div id="error-msg" class="alert alert-danger mt-3 d-none text-center p-2 small" role="alert">
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="text-center mt-3 text-muted small">
+            &copy; 2024 AutoSigner
+        </div>
     </div>
-    <form id="loginForm">
-        <div class="form-group">
-            <label>用户名</label>
-            <input type="text" name="username" required>
-        </div>
-        <div class="form-group">
-            <label>密码</label>
-            <input type="password" name="password" required>
-        </div>
-        <div style="margin-top: 1rem;">
-            <button type="submit" class="btn btn-primary" style="width: 100%;">登录</button>
-        </div>
-        <p id="error-msg" style="color: var(--danger-color); display: none; margin-top: 1rem; text-align: center;"></p>
-    </form>
 </div>
 
 <script>
     document.getElementById('loginForm').onsubmit = async (e) => {
         e.preventDefault();
         const startBtn = e.target.querySelector('button');
+        const originalHtml = startBtn.innerHTML;
         startBtn.disabled = true;
-        startBtn.innerText = "登录中...";
+        startBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 登录中...`;
 
         const formData = new FormData(e.target);
         try {
             await login(formData.get('username'), formData.get('password'));
         } catch (err) {
-            document.getElementById('error-msg').innerText = err.message;
-            document.getElementById('error-msg').style.display = 'block';
+            const errorMsg = document.getElementById('error-msg');
+            errorMsg.innerText = err.message;
+            errorMsg.classList.remove('d-none');
+
+            // Animation
+            const card = e.target.closest('.card');
+            card.classList.add('shake-animation'); // You'd need a keyframe for this, or just rely on Bootstrap alert
+
             startBtn.disabled = false;
-            startBtn.innerText = "登录";
+            startBtn.innerHTML = originalHtml;
         }
     };
 </script>
