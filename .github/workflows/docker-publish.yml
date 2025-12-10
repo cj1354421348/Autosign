@@ -58,7 +58,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=${{ inputs.tag }}
-            type=sha,format=long
+            type=raw,value=${{ github.run_number }}
 
       # 构建并推送 Docker 镜像
       # Build and push Docker image
