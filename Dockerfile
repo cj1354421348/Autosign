@@ -32,6 +32,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files
 COPY . .
 
+# 确保 data 目录存在
+# Ensure data directory exists
+RUN mkdir -p data
+
 # 暴露端口
 # Expose port
 EXPOSE 8000
