@@ -20,15 +20,30 @@ async def on_startup():
     create_db_and_tables()
     
     # Initialize Default User
+    # Sync Admin User from Environment Variables
+    import os
+    admin_user_name = os.getenv("ADMIN_USERNAME", "admin")
+    admin_password = os.getenv("ADMIN_PASSWORD", "admin")
+    
     with Session(engine) as session:
-        user = session.exec(select(User)).first()
-        if not user:
-            print("Creating default admin user...")
-            hashed_pwd = get_password_hash("admin")
-            admin_user = User(username="admin", hashed_password=hashed_pwd)
-            session.add(admin_user)
+        # Check if the configured admin user exists
+        user = session.exec(select(User).where(User.username == admin_user_name)).first()
+        
+        hashed_pwd = get_password_hash(admin_password)
+        
+        if user:
+            # Update existing user's password
+            user.hashed_password = hashed_pwd
+            session.add(user)
             session.commit()
-            print("Default user 'admin' created with password 'admin'")
+            print(f"Admin user '{admin_user_name}' password updated from environment variable.")
+        else:
+            # Create new admin user
+            print(f"Creating admin user '{admin_user_name}' from environment variable...")
+            new_user = User(username=admin_user_name, hashed_password=hashed_pwd)
+            session.add(new_user)
+            session.commit()
+            print(f"Admin user '{admin_user_name}' created.")
             
     start_scheduler()
     await sync_jobs()
