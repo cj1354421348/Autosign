@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="header">
+    <h2>任务列表</h2>
+    <div>
+        <a href="/task/new" class="btn btn-primary">+ 新建任务</a>
+        <button onclick="logout()" class="btn btn-danger" style="margin-left: 10px;">退出登录</button>
+    </div>
+</div>
+
+<div class="grid" id="task-list">
+    <!-- Tasks loaded by JS -->
+    正在加载任务...
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDashboard();
+    });
+</script>
+{% endblock %}

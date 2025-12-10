@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+.idea/
+data/
+*.log
+*.sqlite
+*.db
+Thumbs.db
+Desktop.ini

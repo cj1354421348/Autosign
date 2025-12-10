@@ -1,0 +1,148 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+    <div class="header">
+        <h2 id="page-title">任务详情</h2>
+        <a href="/" class="btn">返回</a>
+    </div>
+
+    <form id="taskForm">
+        <div class="form-group">
+            <label>任务名称</label>
+            <input type="text" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label>Cron 调度 (例如: "0 9 * * *" 每天9点)</label>
+            <input type="text" name="schedule" value="0 9 * * *" required placeholder="m h d m w">
+        </div>
+
+        <div class="form-group">
+            <label>模式</label>
+            <select name="mode" id="mode" onchange="toggleMode()">
+                <option value="COOKIE">Cookie 模式</option>
+                <option value="PASSWORD">账号密码模式</option>
+            </select>
+        </div>
+
+        <!-- Cookie Mode Config -->
+        <div id="section-cookie"
+            style="display:none; border-top:1px solid var(--border-color); padding-top:1rem; margin-top:1rem;">
+            <h4>Cookie 配置</h4>
+            <div class="form-group">
+                <label>签到 URL</label>
+                <input type="url" name="cookie_signin_url">
+            </div>
+            <div class="form-group">
+                <label>Cookie</label>
+                <textarea name="cookie_value" placeholder="key=value; ..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>请求方法</label>
+                <select name="cookie_method">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>API Headers (JSON)</label>
+                <textarea name="cookie_headers"
+                    placeholder='{"Authorization": "Bearer ...", "User-Agent": "..."}'></textarea>
+                <p class="text-muted">如需 Authorization 或 Referer，请在此填写 JSON 格式的 Headers。</p>
+            </div>
+        </div>
+
+        <!-- Password Mode Config -->
+        <div id="section-password"
+            style="display:none; border-top:1px solid var(--border-color); padding-top:1rem; margin-top:1rem;">
+            <h4>账号密码 配置</h4>
+            <div class="form-group">
+                <label>登录 URL</label>
+                <input type="url" name="pwd_login_url">
+            </div>
+            <div class="form-group">
+                <label>登录 Body (JSON)</label>
+                <textarea name="pwd_login_payload" placeholder='{"username": "admin", "password": "123"}'></textarea>
+            </div>
+            <div class="form-group">
+                <label>Token 提取规则 (正则)</label>
+                <input type="text" name="pwd_token_rule">
+                <p class="text-muted">例如: "token":"(.*?)" 或 简单JSON键名 "access_token"</p>
+            </div>
+            <div class="form-group">
+                <label>签到 URL</label>
+                <input type="url" name="pwd_signin_url">
+            </div>
+            <div class="form-group">
+                <label>签到 Headers (JSON)</label>
+                <textarea name="pwd_signin_headers" placeholder='{"Authorization": "Bearer {token}"}'></textarea>
+                <p class="text-muted">使用 {token} 占位符代表提取到的 Token</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem; text-align: right;">
+            <button type="submit" class="btn btn-success">保存任务</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    const TASK_ID = "{{ task_id if task_id else '' }}";
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTaskEditor(TASK_ID);
+
+        document.getElementById('taskForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const mode = formData.get('mode');
+
+            const task = {
+                name: formData.get('name'),
+                schedule: formData.get('schedule'),
+                mode: mode,
+                config: {}
+            };
+
+            if (mode === 'COOKIE') {
+                try {
+                    task.config = {
+                        signin_url: formData.get('cookie_signin_url'),
+                        cookie: formData.get('cookie_value'),
+                        method: formData.get('cookie_method'),
+                        headers: JSON.parse(formData.get('cookie_headers') || '{}')
+                    };
+                } catch (err) {
+                    alert("Cookie Headers JSON 格式错误: " + err.message);
+                    return;
+                }
+            } else {
+                try {
+                    task.config = {
+                        login_url: formData.get('pwd_login_url'),
+                        login_payload: JSON.parse(formData.get('pwd_login_payload') || '{}'),
+                        token_extract_rule: formData.get('pwd_token_rule'),
+                        signin_url: formData.get('pwd_signin_url'),
+                        signin_headers: JSON.parse(formData.get('pwd_signin_headers') || '{}')
+                    };
+                } catch (err) {
+                    alert("JSON 格式错误: " + err.message);
+                    return;
+                }
+            }
+
+            try {
+                const method = TASK_ID ? 'PUT' : 'POST';
+                const url = TASK_ID ? `/api/tasks/${TASK_ID}` : '/api/tasks';
+
+                await apiCall(method, url, task);
+                alert('保存成功');
+                window.location.href = '/';
+            } catch (err) {
+                alert('保存失败: ' + err.message);
+            }
+        };
+    });
+</script>
+{% endblock %}
