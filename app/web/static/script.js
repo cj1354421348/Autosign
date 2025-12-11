@@ -96,6 +96,8 @@ async function loadDashboard() {
             const badge = `<span class="badge ${badgeClass}">${task.last_result || '等待中'}</span>`;
             const modeLabel = task.mode == 'COOKIE' ? '<span class="badge text-bg-light border">Cookie</span>' : '<span class="badge text-bg-dark border">密码</span>';
             const lastRun = task.last_run ? new Date(task.last_run).toLocaleString() : '从未运行';
+            const nextRun = task.next_run_time ? new Date(task.next_run_time).toLocaleString() : '未计划';
+            const nextRunTimeIso = task.next_run_time || '';
 
             html += `
             <div class="col-md-6 col-lg-4">
@@ -108,8 +110,14 @@ async function loadDashboard() {
                         <div class="mb-2">
                              ${modeLabel} <small class="text-muted ms-2"><i class="bi bi-clock"></i> ${task.schedule}</small>
                         </div>
-                        <p class="card-text small text-muted">
+                        <p class="card-text small text-muted mb-1">
                             上次运行: ${lastRun}
+                        </p>
+                        <p class="card-text small text-muted mb-1">
+                            下次运行: ${nextRun}
+                        </p>
+                        <p class="card-text small text-muted">
+                             <span class="countdown-timer fw-bold text-primary" data-next-run="${nextRunTimeIso}"></span>
                         </p>
                     </div>
                     <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between">
@@ -132,10 +140,40 @@ async function loadDashboard() {
             </div>`;
         });
         container.innerHTML = html;
+        updateCountdowns(); // Initial update
     } catch (e) {
         container.innerHTML = `<div class="col-12"><div class="alert alert-danger">加载任务失败: ${e.message}</div></div>`;
     }
 }
+
+function updateCountdowns() {
+    document.querySelectorAll('.countdown-timer').forEach(el => {
+        const nextRunAttr = el.getAttribute('data-next-run');
+        if (!nextRunAttr) {
+            el.innerText = '';
+            return;
+        }
+        const nextRun = new Date(nextRunAttr).getTime();
+        const now = new Date().getTime();
+        const diff = nextRun - now;
+
+        if (diff <= 0) {
+            el.innerText = '准备运行...';
+            return;
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        let text = '倒计时: ';
+        if (days > 0) text += `${days}天 `;
+        text += `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        el.innerText = text;
+    });
+}
+setInterval(updateCountdowns, 1000);
 
 async function runTask(taskId) {
     try {

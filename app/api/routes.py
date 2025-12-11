@@ -5,12 +5,13 @@ from sqlmodel import Session, select
 from app.database.db import get_session
 from app.database.models import Task, Log, TaskStatus, User
 from app.core.engine import engine as signer_engine
-from app.core.scheduler import update_job
+from app.core.scheduler import update_job, get_next_run_time
 from fastapi.templating import Jinja2Templates
 from app.core.security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.api.deps import get_current_user
 import uuid
-from datetime import timedelta
+from datetime import timedelta, datetime
+from typing import Optional, List
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/web/templates")
@@ -35,14 +36,23 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 @router.get("/api/tasks")
 async def get_tasks(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     tasks = session.exec(select(Task)).all()
-    return tasks
+    result = []
+    for t in tasks:
+        t_dict = t.dict()
+        nxt = get_next_run_time(str(t.id))
+        t_dict['next_run_time'] = nxt
+        result.append(t_dict)
+    return result
 
 @router.get("/api/tasks/{task_id}")
 async def get_task(task_id: str, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    return task
+    
+    t_dict = task.dict()
+    t_dict['next_run_time'] = get_next_run_time(str(task.id))
+    return t_dict
 
 @router.post("/api/tasks")
 async def create_task(task: Task, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):

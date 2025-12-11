@@ -61,3 +61,10 @@ async def sync_jobs():
 # Helper to restart/update a specific task job
 async def update_job(task_id: str):
     await sync_jobs() # Lazy method: just resync all. optimization for later.
+
+def get_next_run_time(task_id: str):
+    """Returns the next run time for a given task ID."""
+    job = scheduler.get_job(task_id)
+    if job:
+        return job.next_run_time
+    return None

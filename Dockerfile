@@ -8,8 +8,13 @@ WORKDIR /app
 
 # 设置环境变量，防止 Python 生成 .pyc 文件和缓冲输出
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+
+# Install tzdata for timezone support
+RUN apt-get update && apt-get install -y --no-install-recommends tzdata && rm -rf /var/lib/apt/lists/*
+
+# Set default timezone
+ENV TZ=Asia/Shanghai
 
 # 默认管理员账号设置 (如果在首次启动时数据库为空)
 # Default admin credentials (if database is empty on first run)
