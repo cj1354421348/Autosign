@@ -16,6 +16,14 @@ from typing import Optional, List
 router = APIRouter()
 templates = Jinja2Templates(directory="app/web/templates")
 
+try:
+    with open("VERSION", "r", encoding="utf-8") as f:
+        version = f.read().strip()
+except Exception:
+    version = "unknown"
+
+templates.env.globals["version"] = version
+
 # API Endpoints
 @router.post("/token")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
