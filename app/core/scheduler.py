@@ -42,7 +42,8 @@ async def sync_jobs():
                             hour=cron_parts[1],
                             day=cron_parts[2],
                             month=cron_parts[3],
-                            day_of_week=cron_parts[4]
+                            day_of_week=cron_parts[4],
+                            jitter=int(task.config.get("jitter", 0))
                         )
                          scheduler.add_job(
                             signer_engine.execute_task,

@@ -278,6 +278,7 @@ async function loadTaskEditor(taskId) {
         const form = document.getElementById('taskForm');
         form.querySelector('[name=name]').value = task.name;
         form.querySelector('[name=schedule]').value = task.schedule;
+        form.querySelector('[name=jitter]').value = task.config.jitter || 0;
         form.querySelector('[name=mode]').value = task.mode;
 
         toggleMode();

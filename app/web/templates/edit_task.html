@@ -13,7 +13,7 @@
             <div class="card-body p-4">
                 <form id="taskForm">
                     <div class="row g-3 mb-4">
-                        <div class="col-md-8">
+                        <div class="col-md-6">
                             <label class="form-label fw-bold">任务名称</label>
                             <input type="text" class="form-control bg-body-tertiary" name="name" required
                                 placeholder="例如: 每日签到">
@@ -22,6 +22,11 @@
                             <label class="form-label fw-bold">调度周期 (Cron)</label>
                             <input type="text" class="form-control bg-body-tertiary" name="schedule" value="0 9 * * *"
                                 required placeholder="m h d m w">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold">随机延迟 (秒)</label>
+                            <input type="number" class="form-control bg-body-tertiary" name="jitter" value="0" min="0"
+                                placeholder="0">
                         </div>
                     </div>
 
@@ -142,9 +147,12 @@
                 config: {}
             };
 
+            const jitter = parseInt(formData.get('jitter') || 0);
+
             if (mode === 'COOKIE') {
                 try {
                     task.config = {
+                        jitter: jitter,
                         signin_url: formData.get('cookie_signin_url'),
                         cookie: formData.get('cookie_value'),
                         method: formData.get('cookie_method'),
@@ -157,6 +165,7 @@
             } else {
                 try {
                     task.config = {
+                        jitter: jitter,
                         login_url: formData.get('pwd_login_url'),
                         login_payload: JSON.parse(formData.get('pwd_login_payload') || '{}'),
                         token_extract_rule: formData.get('pwd_token_rule'),
