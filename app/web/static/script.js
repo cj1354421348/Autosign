@@ -288,12 +288,14 @@ async function loadTaskEditor(taskId) {
             form.querySelector('[name=cookie_value]').value = task.config.cookie || '';
             form.querySelector('[name=cookie_method]').value = task.config.method || 'GET';
             form.querySelector('[name=cookie_headers]').value = JSON.stringify(task.config.headers || {}, null, 2);
+            form.querySelector('[name=cookie_result_regex]').value = task.config.result_regex || '';
         } else {
             form.querySelector('[name=pwd_login_url]').value = task.config.login_url || '';
             form.querySelector('[name=pwd_login_payload]').value = JSON.stringify(task.config.login_payload || {}, null, 2);
             form.querySelector('[name=pwd_token_rule]').value = task.config.token_extract_rule || '';
             form.querySelector('[name=pwd_signin_url]').value = task.config.signin_url || '';
             form.querySelector('[name=pwd_signin_headers]').value = JSON.stringify(task.config.signin_headers || { "Authorization": "Bearer {token}" }, null, 2);
+            form.querySelector('[name=pwd_result_regex]').value = task.config.result_regex || '';
         }
 
     } catch (e) {

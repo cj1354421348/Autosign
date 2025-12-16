@@ -10,6 +10,11 @@ class SignerEngine:
         session_gen = get_session()
         session = next(session_gen)
         
+        # Init variables for finally block safety
+        task = None
+        result = False
+        output = "Internal logic error (execution did not start)"
+
         try:
             task = session.get(Task, task_id)
             if not task:
@@ -20,7 +25,7 @@ class SignerEngine:
             session.commit()
             session.refresh(log)
             
-            result = False
+            # Reset output for actual execution
             output = ""
 
             try:
@@ -32,19 +37,86 @@ class SignerEngine:
                 output = f"Error: {str(e)}\n{traceback.format_exc()}"
                 result = False
             
+            # Apply Result Regex Filter if configured
+            if result and task.config.get("result_regex"):
+                 try:
+                    regex = task.config.get("result_regex")
+                    import re # ensure re is imported or use existing
+                    # Using DOTALL to match across newlines if needed, though for JSON usually single line
+                    # But re.search is good. Find all groups.
+                    matches = re.search(regex, output, re.DOTALL)
+                    if matches:
+                        # If groups exist, join them. If no groups but match, use full match.
+                        if matches.groups():
+                            output = " | ".join(matches.groups())
+                        else:
+                            output = matches.group(0)
+                    else:
+                        # Append warning but keep original output? Or replace? 
+                        # User wants filtering. If not found, maybe just say Not Found to keep it clean?
+                        # Or keep original. Linus says "Simple".
+                        # Let's append a note so data isn't lost but user knows it failed.
+                        output += "\n[Regex Filter] No match found."
+                 except Exception as e:
+                     output += f"\n[Regex Filter Error] {e}"
+
             task.last_run = log.timestamp
             task.last_result = TaskResult.SUCCESS if result else TaskResult.FAILURE
             session.add(task)
             
             log.status = result
             log.output = output
-            session.add(log)
+            session.add(log) # Update log with filtered output
             session.commit()
             
         except Exception as e:
             print(f"Critical Error in Engine: {e}")
         finally:
+            # 4. Notify (Only if task was loaded)
+            if task:
+                await self._send_notification(task, result, output)
             session.close()
+
+    async def _send_notification(self, task: Task, result: bool, output: str):
+        """Sends a notification to the configured Notify Hub"""
+        import os
+        
+        # Configuration
+        # Default to localhost:8000 if not set, but user said they handle ports so we trust ENV or default.
+        notify_url = os.getenv("NOTIFY_API_URL", "http://127.0.0.1:8000/api/notify")
+        notify_key = os.getenv("NOTIFY_KEY", "my-fixed-secret-key-123") # Default from docs/test_api
+        
+        if not notify_url or not notify_key:
+            return 
+
+        level = "success" if result else "error"
+        status_text = "Success" if result else "Failed"
+        
+        # Payload construction matches API_DOCS.md
+        # REMOVED TRUNCATION as per user request
+        full_content = f"Task: {task.name}\nResult: {status_text}\nOutput: {output}"
+        
+        payload = {
+            "project_name": "CheckIn Tasks", 
+            "title": f"Task '{task.name}' {status_text}",
+            "content": full_content,
+            "level": level
+        }
+        
+        print(f"[Notify] Sending payload with content length: {len(full_content)}")
+        
+        headers = {
+            "X-Project-Key": notify_key,
+            "Content-Type": "application/json"
+        }
+        
+        try:
+             async with httpx.AsyncClient() as client:
+                resp = await client.post(notify_url, json=payload, headers=headers, timeout=5.0)
+                if resp.status_code != 200:
+                    print(f"[Warn] Notification failed: {resp.status_code} - {resp.text}")
+        except Exception as e:
+             print(f"[Warn] Notification send error: {e}")
 
     async def _run_cookie_mode(self, task: Task) -> tuple[bool, str]:
         config = task.config
@@ -63,7 +135,7 @@ class SignerEngine:
                 else:
                     resp = await client.get(url, headers=headers)
                     
-                return resp.status_code < 400, f"Status: {resp.status_code}\nBody: {resp.text[:1000]}"
+                return resp.status_code < 400, f"Status: {resp.status_code}\nBody: {resp.text[:3000]}"
             except Exception as e:
                 return False, str(e)
 
@@ -119,7 +191,7 @@ class SignerEngine:
             
             try:
                 signin_resp = await client.get(signin_url, headers=final_headers)
-                return signin_resp.status_code < 400, f"Signin Status: {signin_resp.status_code}\n{signin_resp.text[:1000]}"
+                return signin_resp.status_code < 400, f"Signin Status: {signin_resp.status_code}\n{signin_resp.text[:3000]}"
             except Exception as e:
                  return False, f"Signin Request Error: {e}"
 

@@ -21,6 +21,10 @@ ENV TZ=Asia/Shanghai
 # ENV ADMIN_USERNAME=admin
 # ENV ADMIN_PASSWORD=admin
 
+# Notify Hub Configuration
+# ENV NOTIFY_API_URL=http://host.docker.internal:8000/api/notify
+# ENV NOTIFY_KEY=my-fixed-secret-key-123
+
 # 安装系统依赖（如果需要）
 # Install system dependencies (if needed)
 # RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
