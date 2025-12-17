@@ -170,7 +170,8 @@
                         signin_url: formData.get('cookie_signin_url'),
                         cookie: formData.get('cookie_value'),
                         method: formData.get('cookie_method'),
-                        headers: JSON.parse(formData.get('cookie_headers') || '{}')
+                        headers: JSON.parse(formData.get('cookie_headers') || '{}'),
+                        result_regex: formData.get('cookie_result_regex')
                     };
                 } catch (err) {
                     alert("Cookie Headers JSON 格式错误: " + err.message);
@@ -184,7 +185,8 @@
                         login_payload: JSON.parse(formData.get('pwd_login_payload') || '{}'),
                         token_extract_rule: formData.get('pwd_token_rule'),
                         signin_url: formData.get('pwd_signin_url'),
-                        signin_headers: JSON.parse(formData.get('pwd_signin_headers') || '{}')
+                        signin_headers: JSON.parse(formData.get('pwd_signin_headers') || '{}'),
+                        result_regex: formData.get('pwd_result_regex')
                     };
                 } catch (err) {
                     alert("JSON 格式错误: " + err.message);

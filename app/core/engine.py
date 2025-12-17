@@ -52,13 +52,10 @@ class SignerEngine:
                         else:
                             output = matches.group(0)
                     else:
-                        # Append warning but keep original output? Or replace? 
-                        # User wants filtering. If not found, maybe just say Not Found to keep it clean?
-                        # Or keep original. Linus says "Simple".
-                        # Let's append a note so data isn't lost but user knows it failed.
-                        output += "\n[Regex Filter] No match found."
+                        # User expects filtering. If not found, return concise error.
+                        output = "[Regex Filter] No match found in the response."
                  except Exception as e:
-                     output += f"\n[Regex Filter Error] {e}"
+                     output = f"[Regex Filter Error] {e}"
 
             task.last_run = log.timestamp
             task.last_result = TaskResult.SUCCESS if result else TaskResult.FAILURE
