@@ -37,25 +37,8 @@ class SignerEngine:
                 output = f"Error: {str(e)}\n{traceback.format_exc()}"
                 result = False
             
-            # Apply Result Regex Filter if configured
-            if result and task.config.get("result_regex"):
-                 try:
-                    regex = task.config.get("result_regex")
-                    import re # ensure re is imported or use existing
-                    # Using DOTALL to match across newlines if needed, though for JSON usually single line
-                    # But re.search is good. Find all groups.
-                    matches = re.search(regex, output, re.DOTALL)
-                    if matches:
-                        # If groups exist, join them. If no groups but match, use full match.
-                        if matches.groups():
-                            output = " | ".join(matches.groups())
-                        else:
-                            output = matches.group(0)
-                    else:
-                        # User expects filtering. If not found, return concise error.
-                        output = "[Regex Filter] No match found in the response."
-                 except Exception as e:
-                     output = f"[Regex Filter Error] {e}"
+            # Regex filtering moved to notification logic to keep local logs raw
+
 
             task.last_run = log.timestamp
             task.last_result = TaskResult.SUCCESS if result else TaskResult.FAILURE
@@ -88,10 +71,26 @@ class SignerEngine:
 
         level = "success" if result else "error"
         status_text = "Success" if result else "Failed"
+
+        # Apply Regex Filter for Notification ONLY
+        notification_output = output
+        if result and task.config.get("result_regex"):
+            try:
+                regex = task.config.get("result_regex")
+                matches = re.search(regex, output, re.DOTALL)
+                if matches:
+                    if matches.groups():
+                        notification_output = " | ".join(matches.groups())
+                    else:
+                        notification_output = matches.group(0)
+                else:
+                    notification_output = "[Regex Filter] No match found in the response."
+            except Exception as e:
+                notification_output = f"[Regex Filter Error] {e}"
         
         # Payload construction matches API_DOCS.md
         # REMOVED TRUNCATION as per user request
-        full_content = f"Task: {task.name}\nResult: {status_text}\nOutput: {output}"
+        full_content = f"Task: {task.name}\nResult: {status_text}\nOutput: {notification_output}"
         
         payload = {
             "project_name": "CheckIn Tasks", 
